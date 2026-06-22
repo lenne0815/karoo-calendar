@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -13,6 +14,9 @@ import com.lenne0815.karoocalendar.calendar.AgendaSnapshot
 import com.lenne0815.karoocalendar.calendar.CalendarDisplay
 import com.lenne0815.karoocalendar.calendar.CalendarEvent
 import com.lenne0815.karoocalendar.calendar.CalendarRepository
+import com.lenne0815.karoocalendar.setup.LocalNetwork
+import com.lenne0815.karoocalendar.setup.QrCodeBitmap
+import com.lenne0815.karoocalendar.setup.SetupWebServer
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -29,8 +33,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var nowView: TextView
     private lateinit var saveButton: TextView
     private lateinit var refreshButton: TextView
+    private lateinit var setupQrImage: ImageView
+    private lateinit var setupStatusView: TextView
+    private lateinit var setupUrlView: TextView
+    private lateinit var setupActionButton: TextView
     private lateinit var eventsLayout: LinearLayout
     private var refreshJob: Job? = null
+    private var setupWebServer: SetupWebServer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,13 +52,25 @@ class MainActivity : AppCompatActivity() {
         nowView = findViewById(R.id.txtNow)
         saveButton = findViewById(R.id.btnSave)
         refreshButton = findViewById(R.id.btnRefresh)
+        setupQrImage = findViewById(R.id.imgSetupQr)
+        setupStatusView = findViewById(R.id.txtSetupStatus)
+        setupUrlView = findViewById(R.id.txtSetupUrl)
+        setupActionButton = findViewById(R.id.btnSetupAction)
         eventsLayout = findViewById(R.id.layoutEvents)
 
         saveButton.setOnClickListener { saveUrlFromInput() }
         refreshButton.setOnClickListener { refreshCalendar() }
+        setupActionButton.setOnClickListener {
+            if (setupWebServer == null) {
+                startSetupServer()
+            } else {
+                stopSetupServer("Setup stopped")
+            }
+        }
 
         val seeded = seedDebugUrlIfPresent()
         render(repository.snapshot())
+        updateSetupServerUi()
         if (seeded || repository.shouldRefresh()) {
             refreshCalendar()
         }
@@ -66,6 +87,19 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         render(repository.snapshot())
+        if (setupWebServer != null) {
+            updateSetupServerUi()
+        }
+    }
+
+    override fun onStop() {
+        stopSetupServer("Setup stopped")
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        stopSetupServer("Setup stopped")
+        super.onDestroy()
     }
 
     private fun seedDebugUrlIfPresent(): Boolean {
@@ -81,6 +115,74 @@ class MainActivity : AppCompatActivity() {
             statusView.text = it.message ?: "Unable to save debug URL"
             false
         }
+    }
+
+    private fun startSetupServer() {
+        if (setupWebServer != null) return
+        val server = SetupWebServer(
+            saveCalendarUrl = { repository.saveCalendarUrl(it) },
+            onSaved = {
+                runOnUiThread {
+                    render(repository.snapshot())
+                    stopSetupServer("Saved from phone")
+                    refreshCalendar()
+                }
+            },
+        )
+        setupWebServer = server
+        runCatching {
+            server.start()
+            updateSetupServerUi()
+        }.onFailure {
+            server.stop()
+            setupWebServer = null
+            setupQrImage.visibility = View.GONE
+            setupUrlView.text = ""
+            setupStatusView.text = it.message ?: "Setup server unavailable"
+            setupActionButton.text = getString(R.string.start_setup)
+        }
+    }
+
+    private fun stopSetupServer(message: String) {
+        setupWebServer?.stop()
+        setupWebServer = null
+        setupQrImage.visibility = View.GONE
+        setupUrlView.visibility = View.GONE
+        setupUrlView.text = ""
+        setupStatusView.text = message
+        setupActionButton.text = getString(R.string.start_setup)
+    }
+
+    private fun updateSetupServerUi(message: String? = null) {
+        val server = setupWebServer
+        val port = server?.port
+        if (server == null || port == null) {
+            setupQrImage.visibility = View.GONE
+            setupUrlView.visibility = View.GONE
+            setupUrlView.text = ""
+            setupStatusView.text = message ?: "Setup stopped"
+            setupActionButton.text = getString(R.string.start_setup)
+            return
+        }
+
+        val ipAddress = LocalNetwork.bestIpv4Address(this)
+        if (ipAddress.isNullOrBlank()) {
+            setupQrImage.visibility = View.GONE
+            setupUrlView.visibility = View.GONE
+            setupUrlView.text = ""
+            setupStatusView.text = message ?: "No local network address"
+            setupActionButton.text = getString(R.string.stop_setup)
+            return
+        }
+
+        val setupUrl = "http://$ipAddress:$port${server.path}"
+        val qrSize = dp(120)
+        setupQrImage.setImageBitmap(QrCodeBitmap.encode(setupUrl, qrSize))
+        setupQrImage.visibility = View.VISIBLE
+        setupUrlView.visibility = View.VISIBLE
+        setupUrlView.text = setupUrl
+        setupStatusView.text = message ?: "Scan from the same Wi-Fi"
+        setupActionButton.text = getString(R.string.stop_setup)
     }
 
     private fun saveUrlFromInput() {

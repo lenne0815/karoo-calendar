@@ -5,4 +5,8 @@
     <string name="calendar_url_hint">Private Google Calendar iCal URL</string>
     <string name="save_calendar_url">Save URL</string>
     <string name="refresh_calendar">Refresh</string>
+    <string name="phone_setup_title">Phone setup</string>
+    <string name="phone_setup_qr_desc">QR code for local calendar setup page</string>
+    <string name="start_setup">Start setup</string>
+    <string name="stop_setup">Stop setup</string>
 </resources>
