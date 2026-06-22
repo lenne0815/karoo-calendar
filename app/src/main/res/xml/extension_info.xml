@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ExtensionInfo
+    id="karoo-calendar"
+    displayName="@string/app_name"
+    icon="@drawable/ic_launcher"
+    scansDevices="false">
+
+    <DataType
+        typeId="DATATYPE_CALENDAR_DAY"
+        displayName="@string/field_calendar_day"
+        description="@string/field_calendar_day_desc"
+        icon="@drawable/ic_launcher"
+        graphical="true" />
+</ExtensionInfo>

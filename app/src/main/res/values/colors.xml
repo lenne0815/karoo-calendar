@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="karoo_dark">#FF151515</color>
+    <color name="karoo_panel">#FF242424</color>
+    <color name="karoo_panel_light">#FF323232</color>
+    <color name="karoo_green">#FF20D39B</color>
+    <color name="karoo_orange">#FFFF8A2A</color>
+    <color name="karoo_text_dim">#FFC9C9C9</color>
+</resources>

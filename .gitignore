@@ -1,0 +1,11 @@
+.artifacts/
+.gradle/
+build/
+app/build/
+local.properties
+*.apk
+*.ap_
+*.keystore
+*.jks
+LOCAL_SESSION_NOTES.md
+DEPLOY_NOTES.local.md

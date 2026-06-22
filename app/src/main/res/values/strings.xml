@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Karoo Calendar</string>
+    <string name="field_calendar_day">Calendar Day</string>
+    <string name="field_calendar_day_desc">Show today\'s Google Calendar agenda during a ride</string>
+    <string name="calendar_url_hint">Private Google Calendar iCal URL</string>
+    <string name="save_calendar_url">Save URL</string>
+    <string name="refresh_calendar">Refresh</string>
+</resources>
