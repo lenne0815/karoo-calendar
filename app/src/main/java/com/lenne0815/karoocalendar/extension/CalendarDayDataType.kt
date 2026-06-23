@@ -108,6 +108,8 @@ class CalendarDayDataType(extension: String) : DataTypeImpl(extension, TYPE_ID) 
         totalHeight: Dp,
     ) {
         val compact = totalHeight.value < 170f
+        val allDayEvents = CalendarDisplay.allDayEvents(snapshot.events)
+        val hasTimedEvents = snapshot.events.any { !it.allDay }
         val primary = CalendarDisplay.primaryEvent(snapshot.events, now)
         Column(
             modifier = GlanceModifier
@@ -119,13 +121,17 @@ class CalendarDayDataType(extension: String) : DataTypeImpl(extension, TYPE_ID) 
         ) {
             Header(snapshot = snapshot, now = now, zone = zone)
             Spacer(GlanceModifier.height(5.dp))
+            AllDayStrip(allDayEvents, compact)
+            if (allDayEvents.isNotEmpty()) {
+                Spacer(GlanceModifier.height(5.dp))
+            }
             if (primary == null) {
-                EmptyState(snapshot)
+                EmptyState(snapshot, allDayEvents.isNotEmpty(), hasTimedEvents)
             } else {
                 PrimaryEvent(primary, zone, now, compact)
                 if (!compact) {
                     Spacer(GlanceModifier.height(5.dp))
-                    UpcomingList(snapshot.events.filterNot { it.id == primary.id }.take(4), zone)
+                    UpcomingList(CalendarDisplay.secondaryTimedEvents(snapshot.events, primary, now).take(4), zone)
                 }
             }
         }
@@ -161,8 +167,43 @@ class CalendarDayDataType(extension: String) : DataTypeImpl(extension, TYPE_ID) 
     }
 
     @Composable
+    private fun AllDayStrip(events: List<CalendarEvent>, compact: Boolean) {
+        if (events.isEmpty()) return
+        val limit = if (compact) 2 else 3
+        val visibleTitles = events.take(limit).joinToString(", ") { it.title }
+        val overflow = if (events.size > limit) " +${events.size - limit}" else ""
+        Row(
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .background(ColorProvider(PANEL, PANEL))
+                .padding(horizontal = 7.dp, vertical = if (compact) 4.dp else 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "ALL DAY",
+                maxLines = 1,
+                style = TextStyle(
+                    color = ColorProvider(ACCENT, ACCENT),
+                    fontSize = if (compact) 11.sp else 12.sp,
+                    fontWeight = FontWeight.Bold,
+                ),
+            )
+            Spacer(GlanceModifier.width(7.dp))
+            Text(
+                text = visibleTitles + overflow,
+                maxLines = if (compact) 1 else 2,
+                style = TextStyle(
+                    color = ColorProvider(Color.White, Color.White),
+                    fontSize = if (compact) 12.sp else 13.sp,
+                ),
+                modifier = GlanceModifier.fillMaxWidth(),
+            )
+        }
+    }
+
+    @Composable
     private fun PrimaryEvent(event: CalendarEvent, zone: ZoneId, now: Instant, compact: Boolean) {
-        val active = event.overlaps(now)
+        val active = CalendarDisplay.isNowEvent(event, now)
         Box(
             modifier = GlanceModifier
                 .fillMaxWidth()
@@ -229,7 +270,11 @@ class CalendarDayDataType(extension: String) : DataTypeImpl(extension, TYPE_ID) 
     }
 
     @Composable
-    private fun EmptyState(snapshot: AgendaSnapshot) {
+    private fun EmptyState(
+        snapshot: AgendaSnapshot,
+        hasAllDayEvents: Boolean,
+        hasTimedEvents: Boolean,
+    ) {
         Box(
             modifier = GlanceModifier
                 .fillMaxWidth()
@@ -238,7 +283,12 @@ class CalendarDayDataType(extension: String) : DataTypeImpl(extension, TYPE_ID) 
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = if (snapshot.configured) "NO EVENTS TODAY" else "OPEN APP TO SET CALENDAR",
+                text = when {
+                    !snapshot.configured -> "OPEN APP TO SET CALENDAR"
+                    hasTimedEvents -> "NO MORE TIMED EVENTS"
+                    hasAllDayEvents -> "NO TIMED EVENTS"
+                    else -> "NO EVENTS TODAY"
+                },
                 maxLines = 2,
                 style = TextStyle(
                     color = ColorProvider(Color.White, Color.White),
@@ -252,7 +302,7 @@ class CalendarDayDataType(extension: String) : DataTypeImpl(extension, TYPE_ID) 
 
     companion object {
         const val TYPE_ID = "DATATYPE_CALENDAR_DAY"
-        private const val RENDER_VERSION = 1
+        private const val RENDER_VERSION = 2
         private val BACKGROUND = Color(0xFF151515)
         private val PANEL = Color(0xFF2C2C2C)
         private val ACCENT = Color(0xFF20D39B)

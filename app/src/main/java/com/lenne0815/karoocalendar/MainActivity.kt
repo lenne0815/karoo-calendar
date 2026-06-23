@@ -238,7 +238,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         events.forEach { event ->
-            val active = event.overlaps(now)
+            val active = CalendarDisplay.isNowEvent(event, now)
             eventsLayout.addView(
                 eventView(
                     title = event.title,

@@ -8,6 +8,7 @@ Karoo Calendar is a native Hammerhead Karoo app and ride-field extension for sho
 
 - Native Android launcher app for setup, manual refresh, sync status, and today's agenda.
 - Karoo graphical ride field `DATATYPE_CALENDAR_DAY` for in-ride agenda visibility.
+- Ride-field agenda grouping with all-day events separated from timed current/next events.
 - Private Google Calendar iCal/ICS feed support over HTTPS.
 - Explicit phone setup flow with a temporary local QR web page.
 - Dynamic Karoo IP handling: the QR URL is generated from the current local network address.
@@ -20,6 +21,17 @@ Karoo Calendar is a native Hammerhead Karoo app and ride-field extension for sho
   - `NO SYNC` before the first successful refresh.
 
 ![Karoo Calendar setup flow](docs/images/karoo-calendar-setup-flow.png)
+
+## Ride Field
+
+The ride field is designed for a full-screen Karoo data page. It keeps the Karoo field header hidden and renders the agenda directly:
+
+- all-day events appear in a compact `ALL DAY` strip above the agenda,
+- the primary panel shows the currently running timed event as `NOW`,
+- if no timed event is running, the primary panel shows the next timed event,
+- ended timed events drop out of the ride-field preview,
+- all-day events never become `NOW` and never block the current or next timed event,
+- the top-right sync indicator shows when the cache was last refreshed or whether cached data is being used.
 
 ## Setup Flow
 
@@ -82,11 +94,26 @@ adb shell am start \
 
 ## Implementation Notes
 
+- Current app version: `0.1.1` (`versionCode 2`).
 - Package: `com.lenne0815.karoocalendar`
 - Extension id: `karoo-calendar`
 - Karoo field type: `DATATYPE_CALENDAR_DAY`
 - Local setup port: `8787`, with a short fallback port scan if unavailable.
 - The bundled `third_party/karoo-ext-lib` module is Hammerhead `karoo-ext` 1.1.8 source from the official release tarball, used to avoid requiring GitHub Packages credentials during local builds.
+
+## Version History
+
+### 0.1.1
+
+- Fixed ride-field current/next selection so all-day events are not treated as `NOW`.
+- Added a separate `ALL DAY` ride-field strip above timed agenda entries.
+- Kept ended timed events out of the ride-field preview.
+- Added display tests covering all-day separation and timed current/next behavior.
+
+### 0.1.0
+
+- Initial native Karoo launcher app and graphical ride-field extension.
+- Private ICS setup, QR phone setup flow, eight-day cache, and sync indicator.
 
 ## Verification
 

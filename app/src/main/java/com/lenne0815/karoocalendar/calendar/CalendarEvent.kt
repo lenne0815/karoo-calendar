@@ -50,8 +50,31 @@ object CalendarDisplay {
         return "$start-$end"
     }
 
+    fun allDayEvents(events: List<CalendarEvent>): List<CalendarEvent> =
+        events.filter { it.allDay }
+            .sortedWith(compareBy<CalendarEvent> { it.startEpochMillis }.thenBy { it.title })
+
+    fun isNowEvent(event: CalendarEvent, now: Instant): Boolean =
+        !event.allDay && event.overlaps(now)
+
     fun primaryEvent(events: List<CalendarEvent>, now: Instant): CalendarEvent? =
-        events.firstOrNull { it.overlaps(now) } ?: events.firstOrNull { it.isUpcoming(now) } ?: events.lastOrNull()
+        events.asSequence()
+            .filterNot { it.allDay }
+            .firstOrNull { it.overlaps(now) }
+            ?: events.asSequence()
+                .filterNot { it.allDay }
+                .firstOrNull { it.isUpcoming(now) }
+
+    fun secondaryTimedEvents(
+        events: List<CalendarEvent>,
+        primary: CalendarEvent?,
+        now: Instant,
+    ): List<CalendarEvent> {
+        val remaining = events.filter { !it.allDay && it.id != primary?.id }
+        return remaining
+            .filter { it.endInstant.isAfter(now) }
+            .sortedWith(compareBy<CalendarEvent> { !it.overlaps(now) }.thenBy { it.startEpochMillis })
+    }
 
     fun statusLabel(snapshot: AgendaSnapshot, now: Instant, zone: ZoneId): String {
         if (!snapshot.configured) return "No calendar configured"
