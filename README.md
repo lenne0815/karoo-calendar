@@ -13,6 +13,7 @@ Karoo Calendar is a native Hammerhead Karoo app and ride-field extension for sho
 - Explicit phone setup flow with a temporary local QR web page.
 - Dynamic Karoo IP handling: the QR URL is generated from the current local network address.
 - Server off by default: the local setup server runs only after `Start setup`, and stops after `Stop setup`, leaving the app, or saving a URL.
+- Calendar sync uses Karoo's system HTTP bridge first, so supported devices can use the connected Companion app's phone internet when Wi-Fi is unavailable.
 - Offline cache for today plus the next seven days.
 - Ride-field sync indicator:
   - `SYNC HH:mm` for a fresh cache.
@@ -55,9 +56,12 @@ Sync is opportunistic:
 - on manual refresh,
 - while the ride field is visible, checked periodically.
 
+HTTP fetches are routed through Karoo System first. On supported Karoo/Companion setups this lets the request use the phone connection when Wi-Fi is unavailable. The app adds a date range to the ICS URL for the local cache window so the response stays small enough for the Karoo System bridge. If Karoo System does not return a response, the app falls back to a direct device HTTPS request and keeps showing cached data if both paths fail.
+
 ## Privacy
 
-- The private calendar URL is not committed, logged, or included in app resources.
+- The private calendar URL is not committed or included in app resources.
+- The app's own logs do not include the private calendar URL. When Companion sync is used, Karoo System receives the URL to perform the HTTP request and current Karoo OS debug logs may include request URLs.
 - The private calendar URL is stored only in app-private Android preferences.
 - The local setup page is tokenized per setup session.
 - The local setup server is not started automatically and is stopped outside the explicit setup flow.
@@ -94,7 +98,7 @@ adb shell am start \
 
 ## Implementation Notes
 
-- Current app version: `0.1.1` (`versionCode 2`).
+- Current app version: `0.1.2` (`versionCode 3`).
 - Package: `com.lenne0815.karoocalendar`
 - Extension id: `karoo-calendar`
 - Karoo field type: `DATATYPE_CALENDAR_DAY`
@@ -102,6 +106,11 @@ adb shell am start \
 - The bundled `third_party/karoo-ext-lib` module is Hammerhead `karoo-ext` 1.1.8 source from the official release tarball, used to avoid requiring GitHub Packages credentials during local builds.
 
 ## Version History
+
+### 0.1.2
+
+- Route calendar ICS sync through Karoo System HTTP first, matching the Companion-capable pattern used by apps like Headwind.
+- Keep a direct HTTPS fallback for environments where Karoo System HTTP is unavailable.
 
 ### 0.1.1
 

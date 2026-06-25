@@ -10,7 +10,7 @@ import java.time.ZoneId
 class CalendarRepository(
     context: Context,
     private val clock: Clock = Clock.systemDefaultZone(),
-    private val client: CalendarHttpClient = CalendarHttpClient(),
+    private val client: CalendarIcsClient = CalendarHttpClient(context.applicationContext),
     private val parser: IcsParser = IcsParser(),
 ) {
     private val appContext = context.applicationContext
@@ -69,7 +69,7 @@ class CalendarRepository(
         val zone = ZoneId.systemDefault()
         val day = LocalDate.now(clock)
         runCatching {
-            val ics = client.fetch(url)
+            val ics = client.fetch(url.withDateRange(day, CACHE_DAYS))
             val days = parser.parseDays(ics, day, CACHE_DAYS, zone)
             val now = clock.millis()
             prefs.edit()
@@ -85,6 +85,14 @@ class CalendarRepository(
     }
 
     private fun calendarUrl(): String = prefs.getString(KEY_URL, null).orEmpty()
+
+    private fun String.withDateRange(startDay: LocalDate, days: Int): String {
+        val lower = lowercase()
+        if ("start-min=" in lower || "start-max=" in lower) return this
+        val separator = if (contains("?")) "&" else "?"
+        val endDay = startDay.plusDays(days.toLong())
+        return "$this${separator}start-min=$startDay&start-max=$endDay"
+    }
 
     private fun safeError(throwable: Throwable): String {
         val message = throwable.message?.take(80)
